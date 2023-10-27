@@ -1,3 +1,9 @@
+# Customization(By Heesu)
+- `setup.sh`: Shell script for initial environment setup.
+- `compress_video.sh`: Shell script for compress video files(dataset).
+- `train_msrvtt.sh`: Sheel script to run traning code with msrvtt dataset.
+
+---
 # CLIP4Clip: An Empirical Study of CLIP for End to End Video Clip Retrieval
 
 (**July 28, 2021**) Add ViT-B/16 with an extra `--pretrained_clip_name`

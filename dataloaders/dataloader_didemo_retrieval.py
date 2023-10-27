@@ -9,19 +9,20 @@ import numpy as np
 import json
 from dataloaders.rawvideo_util import RawVideoExtractor
 
+
 class DiDeMo_DataLoader(Dataset):
     def __init__(
-            self,
-            subset,
-            data_path,
-            features_path,
-            tokenizer,
-            max_words=30,
-            feature_framerate=1.0,
-            max_frames=100,
-            image_resolution=224,
-            frame_order=0,
-            slice_framepos=0,
+        self,
+        subset,
+        data_path,
+        features_path,
+        tokenizer,
+        max_words=30,
+        feature_framerate=1.0,
+        max_frames=100,
+        image_resolution=224,
+        frame_order=0,
+        slice_framepos=0,
     ):
         self.data_path = data_path
         self.features_path = features_path
@@ -49,11 +50,11 @@ class DiDeMo_DataLoader(Dataset):
         video_json_path_dict["val"] = os.path.join(self.data_path, "val_data.json")
         video_json_path_dict["test"] = os.path.join(self.data_path, "test_data.json")
 
-        with open(video_id_path_dict[self.subset], 'r') as fp:
+        with open(video_id_path_dict[self.subset], "r") as fp:
             video_ids = [itm.strip() for itm in fp.readlines()]
 
         caption_dict = {}
-        with open(video_json_path_dict[self.subset], 'r') as f:
+        with open(video_json_path_dict[self.subset], "r") as f:
             json_data = json.load(f)
         for itm in json_data:
             description = itm["description"]
@@ -95,7 +96,9 @@ class DiDeMo_DataLoader(Dataset):
 
         self.caption_dict = caption_dict
         self.video_dict = video_dict
-        video_ids = list(set(video_ids) & set(self.caption_dict.keys()) & set(self.video_dict.keys()))
+        video_ids = list(
+            set(video_ids) & set(self.caption_dict.keys()) & set(self.video_dict.keys())
+        )
 
         # Get all captions
         self.iter2video_pairs_dict = {}
@@ -103,13 +106,23 @@ class DiDeMo_DataLoader(Dataset):
             if video_id not in video_ids:
                 continue
             caption = self.caption_dict[video_id]
-            n_caption = len(caption['start'])
+            n_caption = len(caption["start"])
             for sub_id in range(n_caption):
-                self.iter2video_pairs_dict[len(self.iter2video_pairs_dict)] = (video_id, sub_id)
+                self.iter2video_pairs_dict[len(self.iter2video_pairs_dict)] = (
+                    video_id,
+                    sub_id,
+                )
 
-        self.rawVideoExtractor = RawVideoExtractor(framerate=feature_framerate, size=image_resolution)
-        self.SPECIAL_TOKEN = {"CLS_TOKEN": "<|startoftext|>", "SEP_TOKEN": "<|endoftext|>",
-                              "MASK_TOKEN": "[MASK]", "UNK_TOKEN": "[UNK]", "PAD_TOKEN": "[PAD]"}
+        self.rawVideoExtractor = RawVideoExtractor(
+            framerate=feature_framerate, size=image_resolution
+        )
+        self.SPECIAL_TOKEN = {
+            "CLS_TOKEN": "<|startoftext|>",
+            "SEP_TOKEN": "<|endoftext|>",
+            "MASK_TOKEN": "[MASK]",
+            "UNK_TOKEN": "[UNK]",
+            "PAD_TOKEN": "[PAD]",
+        }
 
     def __len__(self):
         return len(self.iter2video_pairs_dict)
@@ -119,16 +132,16 @@ class DiDeMo_DataLoader(Dataset):
         k = 1
         r_ind = [sub_id]
 
-        starts = np.zeros(k, dtype=np.long)
-        ends = np.zeros(k, dtype=np.long)
-        pairs_text = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_mask = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_segment = np.zeros((k, self.max_words), dtype=np.long)
+        starts = np.zeros(k, dtype=np.longlong)
+        ends = np.zeros(k, dtype=np.longlong)
+        pairs_text = np.zeros((k, self.max_words), dtype=np.longlong)
+        pairs_mask = np.zeros((k, self.max_words), dtype=np.longlong)
+        pairs_segment = np.zeros((k, self.max_words), dtype=np.longlong)
 
         for i in range(k):
             ind = r_ind[i]
-            start_, end_ = caption['start'][ind], caption['end'][ind]
-            words = self.tokenizer.tokenize(caption['text'][ind])
+            start_, end_ = caption["start"][ind], caption["end"][ind]
+            words = self.tokenizer.tokenize(caption["text"][ind])
             starts[i], ends[i] = start_, end_
 
             words = [self.SPECIAL_TOKEN["CLS_TOKEN"]] + words
@@ -155,20 +168,29 @@ class DiDeMo_DataLoader(Dataset):
         return pairs_text, pairs_mask, pairs_segment, starts, ends
 
     def _get_rawvideo(self, idx, s, e):
-        video_mask = np.zeros((len(s), self.max_frames), dtype=np.long)
+        video_mask = np.zeros((len(s), self.max_frames), dtype=np.longlong)
         max_video_length = [0] * len(s)
 
         # Pair x L x T x 3 x H x W
-        video = np.zeros((len(s), self.max_frames, 1, 3,
-                          self.rawVideoExtractor.size, self.rawVideoExtractor.size), dtype=np.float)
+        video = np.zeros(
+            (
+                len(s),
+                self.max_frames,
+                1,
+                3,
+                self.rawVideoExtractor.size,
+                self.rawVideoExtractor.size,
+            ),
+            dtype=np.float16,
+        )
         video_path = self.video_dict[idx]
 
         try:
             for i in range(len(s)):
                 start_time = int(s[i])
                 end_time = int(e[i])
-                start_time = start_time if start_time >= 0. else 0.
-                end_time = end_time if end_time >= 0. else 0.
+                start_time = start_time if start_time >= 0.0 else 0.0
+                end_time = end_time if end_time >= 0.0 else 0.0
                 if start_time > end_time:
                     start_time, end_time = end_time, start_time
                 elif start_time == end_time:
@@ -176,36 +198,59 @@ class DiDeMo_DataLoader(Dataset):
 
                 cache_id = "{}_{}_{}".format(video_path, start_time, end_time)
                 # Should be optimized by gathering all asking of this video
-                raw_video_data = self.rawVideoExtractor.get_video_data(video_path, start_time, end_time)
-                raw_video_data = raw_video_data['video']
+                raw_video_data = self.rawVideoExtractor.get_video_data(
+                    video_path, start_time, end_time
+                )
+                raw_video_data = raw_video_data["video"]
 
                 if len(raw_video_data.shape) > 3:
                     raw_video_data_clip = raw_video_data
                     # L x T x 3 x H x W
-                    raw_video_slice = self.rawVideoExtractor.process_raw_data(raw_video_data_clip)
+                    raw_video_slice = self.rawVideoExtractor.process_raw_data(
+                        raw_video_data_clip
+                    )
                     if self.max_frames < raw_video_slice.shape[0]:
                         if self.slice_framepos == 0:
-                            video_slice = raw_video_slice[:self.max_frames, ...]
+                            video_slice = raw_video_slice[: self.max_frames, ...]
                         elif self.slice_framepos == 1:
-                            video_slice = raw_video_slice[-self.max_frames:, ...]
+                            video_slice = raw_video_slice[-self.max_frames :, ...]
                         else:
-                            sample_indx = np.linspace(0, raw_video_slice.shape[0] - 1, num=self.max_frames, dtype=int)
+                            sample_indx = np.linspace(
+                                0,
+                                raw_video_slice.shape[0] - 1,
+                                num=self.max_frames,
+                                dtype=int,
+                            )
                             video_slice = raw_video_slice[sample_indx, ...]
                     else:
                         video_slice = raw_video_slice
 
-                    video_slice = self.rawVideoExtractor.process_frame_order(video_slice, frame_order=self.frame_order)
+                    video_slice = self.rawVideoExtractor.process_frame_order(
+                        video_slice, frame_order=self.frame_order
+                    )
 
                     slice_len = video_slice.shape[0]
-                    max_video_length[i] = max_video_length[i] if max_video_length[i] > slice_len else slice_len
+                    max_video_length[i] = (
+                        max_video_length[i]
+                        if max_video_length[i] > slice_len
+                        else slice_len
+                    )
                     if slice_len < 1:
                         pass
                     else:
                         video[i][:slice_len, ...] = video_slice
                 else:
-                    print("video path: {} error. video id: {}, start: {}, end: {}".format(video_path, idx, start_time, end_time))
+                    print(
+                        "video path: {} error. video id: {}, start: {}, end: {}".format(
+                            video_path, idx, start_time, end_time
+                        )
+                    )
         except Exception as excep:
-            print("video path: {} error. video id: {}, start: {}, end: {}, Error: {}".format(video_path, idx, s, e, excep))
+            print(
+                "video path: {} error. video id: {}, start: {}, end: {}, Error: {}".format(
+                    video_path, idx, s, e, excep
+                )
+            )
             pass
             # raise e
 
@@ -217,6 +262,8 @@ class DiDeMo_DataLoader(Dataset):
     def __getitem__(self, feature_idx):
         video_id, sub_id = self.iter2video_pairs_dict[feature_idx]
 
-        pairs_text, pairs_mask, pairs_segment, starts, ends = self._get_text(video_id, sub_id)
+        pairs_text, pairs_mask, pairs_segment, starts, ends = self._get_text(
+            video_id, sub_id
+        )
         video, video_mask = self._get_rawvideo(video_id, starts, ends)
         return pairs_text, pairs_mask, pairs_segment, video, video_mask

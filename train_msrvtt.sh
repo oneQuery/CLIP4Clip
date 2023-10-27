@@ -2,9 +2,10 @@
 
 DATA_PATH='/data/pia-data/msrvtt/msrvtt_data'
 
-python -m torch.distributed.launch --nproc_per_node=4 \
+# python -m torch.distributed.launch --nproc_per_node=1 \
+torchrun --nproc_per_node=1 \
 main_task_retrieval.py --do_train --num_thread_reader=0 \
---epochs=5 --batch_size=128 --n_display=50 \
+--epochs=5 --batch_size=64 --n_display=50 \
 --train_csv ${DATA_PATH}/MSRVTT_train.9k.csv \
 --val_csv ${DATA_PATH}/MSRVTT_JSFUSION_test.csv \
 --data_path ${DATA_PATH}/MSRVTT_data.json \
