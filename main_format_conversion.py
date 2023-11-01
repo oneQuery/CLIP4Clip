@@ -85,6 +85,9 @@ def main():
         videos = [None] * len(data)
         sentences = [None] * len(data)
 
+        # TODO: Add video_id
+        # TODO: Break down the 5 sentences
+        # TODO: Add video_id to each sentence
         for idx, single_data in enumerate(data):
             video_info = {
                 "filename": single_data["videos"][0]["filename"],
