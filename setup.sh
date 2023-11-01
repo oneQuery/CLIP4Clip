@@ -4,6 +4,7 @@
 conda install --yes pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 pip install ftfy regex tqdm
 pip install opencv-python boto3 requests pandas
+pip install natsort
 
 # install ffmpeg
 sudo apt install ffmpeg
