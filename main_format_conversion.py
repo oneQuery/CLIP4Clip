@@ -82,13 +82,12 @@ def main():
     if args.target_format == "alchera":
         raise NotImplementedError
     elif args.target_format == "msrvtt":
+        video_idx = 0
+        sen_idx = 0
         videos = [None] * len(data)
-        sentences = [None] * len(data)
+        sentences = [None] * len(data) * 5
 
-        # TODO: Add video_id
-        # TODO: Break down the 5 sentences
-        # TODO: Add video_id to each sentence
-        for idx, single_data in enumerate(data):
+        for data_i, single_data in enumerate(data):
             video_info = {
                 "filename": single_data["videos"][0]["filename"],
                 "duration": single_data["videos"][0]["duration"],
@@ -100,17 +99,27 @@ def main():
                 "location": single_data["videos"][0]["location"],
                 "audio": single_data["videos"][0]["audio"],
                 "time": single_data["videos"][0]["time"],
+                "video_id": f"video{str(video_idx)}",
             }
+            videos[data_i] = video_info
 
-            sentence_info = {
-                "kor_sentences": single_data["videos"][0]["kor_sentences"],
-                "eng_sentences": single_data["videos"][0]["eng_sentences"],
-                "words_per_sentence": single_data["videos"][0]["words_per_sentence"],
-                "total_sentences": single_data["videos"][0]["total_sentences"],
-            }
+            num_sentences = len(single_data["videos"][0]["eng_sentences"])
+            for sen_i in range(num_sentences):
+                sentence_info = {
+                    "kor_sentences": single_data["videos"][0]["kor_sentences"][sen_i],
+                    "caption": single_data["videos"][0]["eng_sentences"][sen_i],
+                    "words_per_sentence": single_data["videos"][0][
+                        "words_per_sentence"
+                    ][sen_i],
+                    "video_id": f"video{str(video_idx)}",
+                    "sen_id": sen_idx,
+                }
 
-            videos[idx] = video_info
-            sentences[idx] = sentence_info
+                sentences[sen_idx] = sentence_info
+
+                sen_idx += 1
+
+            video_idx += 1
 
         converted_data = {
             "videos": videos,
