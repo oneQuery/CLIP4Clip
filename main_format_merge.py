@@ -4,6 +4,7 @@ import json
 from itertools import chain
 from util import get_logger
 import datetime
+from tqdm import tqdm
 
 
 def get_args(description="Merge json files"):
@@ -66,16 +67,19 @@ def main():
     logger.info(f"Number of json files to merge: {len(json_filepaths)}")
 
     ##############################
-    # Assign video id
+    # Assign video id and sentence id
     if args.format_type == "msrvtt":
         idx = 0
+        # TODO: time optimization
         for single_data in data:
-            for video, sentence in zip(single_data["videos"], single_data["sentences"]):
-                video["video_id"] = f"video{str(idx)}"
-                sentence["video_id"] = f"video{str(idx)}"
-                idx += 1
+            for video in tqdm(single_data["videos"]):
+                video["sen_id"] = []
+                for sentence in single_data["sentences"]:
+                    if video["video_id"] == sentence["video_id"]:
+                        video["sen_id"].append(sentence["sen_id"])
 
-        print("breakpoint")
+        # TODO: Reassign video id and sentence id
+
     else:
         raise NotImplementedError
 
