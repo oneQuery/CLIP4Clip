@@ -51,84 +51,60 @@ def set_logger(args):
         logger.info("  <<< {}: {}".format(key, args.__dict__[key]))
 
 
+def read_json(file_path):
+    with open(file_path, "r") as file:
+        return json.load(file)
+
+
+def write_json(data, file_path):
+    with open(file_path, "w") as file:
+        json.dump(data, file, indent=4)
+    logger.info(f"Write merged json file: {file_path}")
+
+
+def reassign_ids(videos, sentences, video_id_offset, sen_id_offset):
+    new_videos = []
+    new_sentences = []
+    video_id_map = {}
+
+    for i, video in enumerate(videos):
+        new_video_id = f"video{video_id_offset + i}"
+        video_id_map[video["video_id"]] = new_video_id
+        video["video_id"] = new_video_id
+        new_videos.append(video)
+
+    for sen in sentences:
+        old_video_id = sen["video_id"]
+        sen["video_id"] = video_id_map.get(old_video_id, old_video_id)
+        sen["sen_id"] = sen_id_offset
+        sen_id_offset += 1
+        new_sentences.append(sen)
+
+    return new_videos, new_sentences, video_id_offset + len(videos), sen_id_offset
+
+
 def main():
     global logger
     args = get_args()
     set_logger(args)
 
-    ##############################
-    # Read source json files
-    json_filepaths = args.input_json_filepaths
-    data = [None] * len(json_filepaths)
-    for idx, json_filepath in enumerate(json_filepaths):
-        with open(json_filepath, "r", encoding="utf-8-sig") as f:
-            single_data = json.load(f)
-        data[idx] = single_data
-    logger.info(f"Number of json files to merge: {len(json_filepaths)}")
+    merged_videos = []
+    merged_sentences = []
+    video_id_offset = 0
+    sen_id_offset = 0
 
-    ##############################
-    # Assign video id and sentence id
-    if args.format_type == "msrvtt":
-        idx = 0
-        # TODO: time optimization
-        for single_data in data:
-            for video in tqdm(single_data["videos"]):
-                video["sen_id"] = []
-                for sentence in single_data["sentences"]:
-                    if video["video_id"] == sentence["video_id"]:
-                        video["sen_id"].append(sentence["sen_id"])
+    for json_path in args.input_json_filepaths:
+        data = read_json(json_path)
+        videos, sentences, video_id_offset, sen_id_offset = reassign_ids(
+            data["videos"], data["sentences"], video_id_offset, sen_id_offset
+        )
+        merged_videos.extend(videos)
+        merged_sentences.extend(sentences)
 
-        # TODO: Reassign video id and sentence id
-        video_id_used = []
-        for single_data in data:
-            for video in single_data["video"]:
-                if video["video_id"] not in video_id_used:
-                    video_id_used.append(video["video_id"])
-                elif video["video_id"] in video_id_used:
-                    # TODO: Reassign video id
-                    # video['video_id'] =
-                    pass
+    merged_data = {"videos": merged_videos, "sentences": merged_sentences}
 
-    else:
-        raise NotImplementedError
-
-    ##############################
-    # Merge json files
-    if args.format_type == "msrvtt":
-        # Get number of videos and sentences
-        num_json_files = len(json_filepaths)
-
-        videos = [None] * num_json_files
-        sentences = [None] * num_json_files
-
-        # Merge videos and sentences
-        for idx, single_data in enumerate(data):
-            videos[idx] = single_data["videos"]
-            sentences[idx] = single_data["sentences"]
-
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        info = {"contributor": "PIA Space", "data_created": f"{now}"}
-        merged_videos = list(chain(*videos))
-        merged_sentences = list(chain(*sentences))
-
-        merged_json = {
-            "info": info,
-            "videos": merged_videos,
-            "sentences": merged_sentences,
-        }
-        logger.info(f"Number of videos: {len(merged_videos)}")
-        logger.info(f"Number of sentences: {len(merged_sentences)}")
-
-    else:
-        raise NotImplementedError
-
-    ##############################
-    # Write merged json file
     output_json_filepath = os.path.join(args.output_dir, args.output_json_filename)
-    with open(output_json_filepath, "w") as f:
-        json.dump(merged_json, f, indent=4, ensure_ascii=False)
-    logger.info(f"Write merged json file: {output_json_filepath}")
+    write_json(merged_data, output_json_filepath)
 
 
 if __name__ == "__main__":
