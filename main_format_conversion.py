@@ -78,10 +78,16 @@ def main():
         raise NotImplementedError
 
     #############################
+    # Convert to common format
+    # TODO: Implement
+
+    #############################
     # Convert json files
     if args.target_format == "alchera":
         raise NotImplementedError
     elif args.target_format == "msrvtt":
+        # TODO: Convert from common format to msrvtt format
+
         video_idx = 0
         sen_idx = 0
         videos = [None] * len(data)
