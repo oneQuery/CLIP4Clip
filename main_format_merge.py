@@ -79,6 +79,15 @@ def main():
                         video["sen_id"].append(sentence["sen_id"])
 
         # TODO: Reassign video id and sentence id
+        video_id_used = []
+        for single_data in data:
+            for video in single_data["video"]:
+                if video["video_id"] not in video_id_used:
+                    video_id_used.append(video["video_id"])
+                elif video["video_id"] in video_id_used:
+                    # TODO: Reassign video id
+                    # video['video_id'] =
+                    pass
 
     else:
         raise NotImplementedError
